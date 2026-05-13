@@ -1,6 +1,10 @@
 import language_tool_python
 import re
 
+# MOVE THIS HERE: Initialize the tool once at the top of the file.
+# This makes the API lightning fast after the initial startup.
+tool = language_tool_python.LanguageTool('en-US')
+
 def pre_clean_text(text):
     """Sanitizes text before grammar checking to prevent false positives."""
     if not text:
@@ -25,7 +29,7 @@ def check_grammar(text):
     """Step 4: Professional Grammar Check (No Jargon Flags)"""
     clean_txt = pre_clean_text(text)
     
-    tool = language_tool_python.LanguageTool('en-US')
+    # Logic: Use the global 'tool' variable instead of creating a new one
     matches = tool.check(clean_txt)
     
     errors = []
@@ -33,9 +37,11 @@ def check_grammar(text):
     ignore_rules = ["MORFOLOGIK_RULE_EN_US", "UPPERCASE_SENTENCE_START", "POSSIBLE_TYPO"]
     
     for match in matches:
-        # Check if the triggered rule is in our ignore list
-        # UPDATED: ruleId -> rule_id
-        if any(rule in match.rule_id for rule in ignore_rules):
+        # FIXED: Use 'ruleId' (camelCase) to avoid AttributeErrors
+        # We use getattr as a safety net in case of version drift
+        rule_id = getattr(match, 'ruleId', getattr(match, 'rule_id', 'Unknown'))
+        
+        if any(rule in rule_id for rule in ignore_rules):
             continue
             
         errors.append({
@@ -44,6 +50,7 @@ def check_grammar(text):
             "suggestion": match.replacements[0] if match.replacements else "N/A"
         })
         
+        # Limit to 5 errors to keep the UI clean for the React frontend
         if len(errors) >= 5:
             break
             
