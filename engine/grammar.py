@@ -26,5 +26,32 @@ def pre_clean_text(text):
     return text
 
 def check_grammar(text):
-    """Checks grammar and returns a list of issues."""
+    """Step 4: Professional Grammar Check (No Jargon Flags)"""
+    clean_txt = pre_clean_text(text)
+    
+    # Logic: Use the global 'tool' variable instead of creating a new one
+    matches = tool.check(clean_txt)
+    
+    errors = []
+    # Filter out spellings (jargon), title cases, and minor typos
+    ignore_rules = ["MORFOLOGIK_RULE_EN_US", "UPPERCASE_SENTENCE_START", "POSSIBLE_TYPO"]
+    
+    for match in matches:
+        # FIXED: Use 'ruleId' (camelCase) to avoid AttributeErrors
+        # We use getattr as a safety net in case of version drift
+        rule_id = getattr(match, 'ruleId', getattr(match, 'rule_id', 'Unknown'))
+        
+        if any(rule in rule_id for rule in ignore_rules):
+            continue
+            
+        errors.append({
+            "message": match.message,
+            "context": match.context,
+            "suggestion": match.replacements[0] if match.replacements else "N/A"
+        })
+        
+        # Limit to 5 errors to keep the UI clean for the React frontend
+        if len(errors) >= 5:
+            break
+            
     return []
